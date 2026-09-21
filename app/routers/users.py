@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.database import get_db
 from app.models.user import User
-from app.security import hash_password, verify_password
+from app.security import hash_password, verify_password, create_access_token, get_current_user, require_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -42,6 +42,32 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid username or password")
 
+    access_token = create_access_token(data={"user_id": db_user.id})
+
     return {
-        'message': 'Login successful'
+        'token': access_token,
+        'token_type': 'bearer'
     }
+
+# @router.get("/me")
+# def get_me(token: str = Depends(oauth2_scheme)):
+#     print(token)
+#
+#     return token
+
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.get("/", response_model=list[UserResponse])
+def get_users(current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    users = db.query(User).all()
+
+    return users
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    return user
+
