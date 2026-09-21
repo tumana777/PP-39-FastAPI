@@ -9,6 +9,7 @@ from app.database import Base
 from app.database import DATABASE_URL
 from app.models.product import Product
 from app.models.category import Category
+from app.models.user import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
